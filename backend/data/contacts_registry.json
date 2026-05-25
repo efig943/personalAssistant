@@ -1,0 +1,11 @@
+{
+    "contacts": [
+        {
+            "name": "ethan",
+            "username": "ethanfigz",
+            "urgency_threshold_days": 7,
+            "chat_id": 8241224953,
+            "last_contact_time": "2026-05-25T02:07:49.293945+00:00"
+        }
+    ]
+}

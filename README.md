@@ -1,4 +1,4 @@
-# 🧠 Life Control Panel & Autonomous Social CRM
+# 🧠 Omni-Assistant
 
 > **A proactive AI backend that manages your life calendar, guards your habits, and autonomously maintains your relationships.**
 
@@ -122,7 +122,7 @@ The result: busy professionals become social ghosts — not because they don't c
 
 ## ✅ The Solution
 
-The **Life Control Panel** is an autonomous background AI agent that runs continuously, doing the relationship and schedule management work *for* you.
+The **Omni-Assistant** is an autonomous background AI agent that runs continuously, doing the relationship and schedule management work *for* you.
 
 It does three things simultaneously:
 
@@ -448,7 +448,3 @@ All life configurations are editable live via the **React Settings Modal** or by
 | **Calendar Component** | react-big-calendar |
 
 ---
-
-## 📄 License
-
-MIT © 2026. Built with intention. Ship your life.

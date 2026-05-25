@@ -1,0 +1,25 @@
+{
+    "profile": {
+        "name": "Ethan"
+    },
+    "nutrition": {
+        "baseline_protein_floor_g": 170,
+        "meals_per_day": 2
+    },
+    "weekly_template_registry": {
+        "Sunday": {
+            "training_state": "LIFT"
+        },
+        "Friday": {
+            "training_state": "LIFT",
+            "multiplier": 0.98
+        },
+        "Wednesday": {
+            "training_state": "LIFT",
+            "multiplier": 1.15
+        }
+    },
+    "sleep_settings": {
+        "required_duration_hours": 6
+    }
+}

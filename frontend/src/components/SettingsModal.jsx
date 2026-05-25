@@ -15,9 +15,12 @@ export default function SettingsModal({ onClose, initialGoals, initialContacts, 
 
   const handleChange = (path, value) => {
     setGoals((prev) => {
-      const newGoals = JSON.parse(JSON.stringify(prev)); // deep copy to ensure reactivity
+      const newGoals = JSON.parse(JSON.stringify(prev || {})); // deep copy to ensure reactivity
       let current = newGoals;
       for (let i = 0; i < path.length - 1; i++) {
+        if (!current[path[i]]) {
+          current[path[i]] = {}; // Initialize missing nested objects
+        }
         current = current[path[i]];
       }
       current[path[path.length - 1]] = value;
@@ -111,7 +114,20 @@ export default function SettingsModal({ onClose, initialGoals, initialContacts, 
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-1">Timezone</label>
-                  <input type="text" value={goals.profile?.timezone || ''} onChange={(e) => handleChange(['profile', 'timezone'], e.target.value)} className="w-full bg-surface border border-surface/50 rounded-lg p-2 text-sm text-text focus:border-primary outline-none" />
+                  <select value={goals.profile?.timezone || 'America/Los_Angeles'} onChange={(e) => handleChange(['profile', 'timezone'], e.target.value)} className="w-full bg-surface border border-surface/50 rounded-lg p-2 text-sm text-text focus:border-primary outline-none">
+                    <option value="America/New_York">Eastern Time (ET) - America/New_York</option>
+                    <option value="America/Chicago">Central Time (CT) - America/Chicago</option>
+                    <option value="America/Denver">Mountain Time (MT) - America/Denver</option>
+                    <option value="America/Phoenix">Mountain Time (No DST) - America/Phoenix</option>
+                    <option value="America/Los_Angeles">Pacific Time (PT) - America/Los_Angeles</option>
+                    <option value="America/Anchorage">Alaska Time (AKT) - America/Anchorage</option>
+                    <option value="Pacific/Honolulu">Hawaii Time (HT) - Pacific/Honolulu</option>
+                    <option value="Europe/London">UK Time - Europe/London</option>
+                    <option value="Europe/Paris">Central European Time - Europe/Paris</option>
+                    <option value="Asia/Tokyo">Japan Time - Asia/Tokyo</option>
+                    <option value="Australia/Sydney">Eastern Australia Time - Australia/Sydney</option>
+                    <option value="UTC">UTC (Coordinated Universal Time)</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-1">Social Quota / Week</label>
@@ -251,7 +267,7 @@ export default function SettingsModal({ onClose, initialGoals, initialContacts, 
                     <div className="grid grid-cols-3 gap-4 flex-1">
                       <div>
                         <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-1">Name</label>
-                        <input type="text" value={contact.name} onChange={(e) => {
+                        <input type="text" value={contact.name || ''} onChange={(e) => {
                           const newContacts = [...contacts];
                           newContacts[index].name = e.target.value;
                           setContacts(newContacts);
@@ -259,7 +275,7 @@ export default function SettingsModal({ onClose, initialGoals, initialContacts, 
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-1">Username</label>
-                        <input type="text" value={contact.username} onChange={(e) => {
+                        <input type="text" value={contact.username || ''} onChange={(e) => {
                           const newContacts = [...contacts];
                           newContacts[index].username = e.target.value;
                           setContacts(newContacts);
@@ -267,7 +283,7 @@ export default function SettingsModal({ onClose, initialGoals, initialContacts, 
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-1">Urgency (Days)</label>
-                        <input type="number" value={contact.urgency_threshold_days} onChange={(e) => {
+                        <input type="number" value={contact.urgency_threshold_days || ''} onChange={(e) => {
                           const newContacts = [...contacts];
                           newContacts[index].urgency_threshold_days = parseInt(e.target.value) || 0;
                           setContacts(newContacts);

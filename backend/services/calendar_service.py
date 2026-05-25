@@ -12,20 +12,23 @@ from backend.core.config import GOOGLE_CALENDAR_WORK_ID
 
 def get_calendar_service():
     """Builds and returns the Google Calendar API service using token.json."""
-    if not os.path.exists("token.json"):
+    root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    token_path = os.path.join(root_dir, "token.json")
+    
+    if not os.path.exists(token_path):
         return None
     try:
         from google.oauth2.credentials import Credentials
         from googleapiclient.discovery import build
 
         creds = Credentials.from_authorized_user_file(
-            "token.json", ["https://www.googleapis.com/auth/calendar"]
+            token_path, ["https://www.googleapis.com/auth/calendar"]
         )
         if creds.expired and creds.refresh_token:
             from google.auth.transport.requests import Request
 
             creds.refresh(Request())
-            with open("token.json", "w") as f:
+            with open(token_path, "w") as f:
                 f.write(creds.to_json())
         return build("calendar", "v3", credentials=creds)
     except Exception as e:
