@@ -150,8 +150,21 @@ async def build_master_calendar() -> list:
         day_str = current_day.strftime("%A")
 
         # Sleep
-        sleep_start = current_day.replace(hour=23, minute=0, second=0, microsecond=0)
-        sleep_end = sleep_start + datetime.timedelta(hours=8)
+        sleep_settings = user_goals.get("sleep_settings", {})
+        wake_time_str = sleep_settings.get("target_wake_time", "07:00")
+        try:
+            wake_h, wake_m = map(int, wake_time_str.split(":"))
+        except:
+            wake_h, wake_m = 7, 0
+            
+        sleep_duration = sleep_settings.get("required_duration_hours", 8)
+        
+        # Calculate the wake up time on the current day + 1 (since current day usually means the day the night starts)
+        # Wait, if we are mapping days, usually "Sleep Block" spans from night to morning.
+        # Let's say sleep_end is the morning of the NEXT day if current_day is the start of the night.
+        # Actually, let's keep the existing semantic: it ends at target_wake_time on current_day + 1.
+        sleep_end = current_day.replace(hour=wake_h, minute=wake_m, second=0, microsecond=0) + datetime.timedelta(days=1)
+        sleep_start = sleep_end - datetime.timedelta(hours=sleep_duration)
         events.append(
             {
                 "title": "Sleep Block",

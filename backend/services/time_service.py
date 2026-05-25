@@ -21,7 +21,7 @@ async def extract_proposed_time(text: str) -> dict | None:
 
     user_goals = data_controller.read_json("user_goals.json")
     worker_model = user_goals.get("llm_model_routing", {}).get(
-        "tool_worker", "llama-3.1-8b-instant"
+        "tool_worker", "llama3-8b-8192"
     )
     tz_name = user_goals.get("profile", {}).get("timezone", "America/Los_Angeles")
     tz = pytz.timezone(tz_name)

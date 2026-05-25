@@ -31,8 +31,8 @@ async def generate_social_draft(
     user_goals = data_controller.read_json("user_goals.json")
     quota = user_goals.get("profile", {}).get("social_events_per_week", "Unlimited")
     llm_routing = user_goals.get("llm_model_routing", {})
-    tool_worker = llm_routing.get("tool_worker", "llama-3.1-8b-instant")
-    reasoning_worker = llm_routing.get("reasoning_worker", "llama-3.3-70b-versatile")
+    tool_worker = llm_routing.get("tool_worker", "llama3-8b-8192")
+    reasoning_worker = llm_routing.get("reasoning_worker", "llama3-70b-8192")
 
     social_log = data_controller.read_json(
         "approved_social_events.json", default_val={"events": []}

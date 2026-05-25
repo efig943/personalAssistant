@@ -144,10 +144,18 @@ async def telegram_message_handler(update: Update, context: ContextTypes.DEFAULT
             f"and asking to reschedule or propose a different time.\nContext: {user_reply_context}"
         )
     else:
-        prompt = (
-            f"Friend ({sender_name}) replied. Draft a reply following the Social Butterfly rules.\n"
-            f"Context: {user_reply_context}"
-        )
+        if user_text.strip().lower() == "/start" or len(chat_history) <= 1:
+            prompt = (
+                f"Friend ({sender_name}) just started the conversation. "
+                "Draft an enthusiastic opening message explicitly saying something like 'Let's get a social plan going!' "
+                "and IMMEDIATELY suggest a specific activity using one of the user's Interests to kick off the negotiation.\n"
+                f"Context: {user_reply_context}"
+            )
+        else:
+            prompt = (
+                f"Friend ({sender_name}) replied. Draft a reply following the Social Butterfly rules.\n"
+                f"Context: {user_reply_context}"
+            )
 
     draft_data = await generate_social_draft(str(chat_id), prompt, current_event_state)
 

@@ -4,7 +4,7 @@
     },
     "nutrition": {
         "baseline_protein_floor_g": 170,
-        "meals_per_day": 2
+        "meals_per_day": 4
     },
     "weekly_template_registry": {
         "Sunday": {
@@ -20,6 +20,7 @@
         }
     },
     "sleep_settings": {
-        "required_duration_hours": 6
+        "required_duration_hours": 6,
+        "target_wake_time": "06:00"
     }
 }
