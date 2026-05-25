@@ -27,7 +27,6 @@ First, pull the code and set up your local environments.
 # Clone the repository
 git clone git clone https://github.com/efig943/personalAssistant.git
 cd personalAssitant
-```
 
 # Set up the Python Backend
 python3 -m venv venv
@@ -39,8 +38,9 @@ source .venv/bin/activate
 cd frontend
 npm install
 cd ..
+```
 
-Step 2: Environment Variables (.env)
+### Step 2: Environment Variables (.env)
 Create a .env file in the root directory and add the following keys:
 
 ```bash
@@ -50,15 +50,15 @@ TELEGRAM_API_ID=your_api_id
 TELEGRAM_API_HASH=your_api_hash
 TELEGRAM_BOT_TOKEN=your_bot_token
 Groq: Get your API key from the Groq Console.
+```
 
 Telegram: * Talk to @BotFather on Telegram to create a bot and get your TELEGRAM_BOT_TOKEN.
-
 Get your TELEGRAM_API_ID and TELEGRAM_API_HASH from my.telegram.org.
 
-Step 3: Google Calendar Integration
+### Step 3: Google Calendar Integration
 The system needs access to your calendar to perform gap-scanning and collision detection.
 
-Create a Project: Go to the Google Cloud Console. Click the project drop-down at the top left and select New Project. Name it Social Butterfly.
+Create a Project: Go to the Google Cloud Console. Click the project drop-down at the top left and select New Project. Name it personalAssistabt.
 
 Enable the API: In the left sidebar, go to APIs & Services > Library. Search for Google Calendar API and click Enable.
 
@@ -82,25 +82,27 @@ Download & Rename: Click the Download JSON button. Rename that file strictly to 
 
 Work Calendar ID: Locate your Work Calendar ID in your Google Calendar settings and ensure the system maps it correctly to avoid booking social events over work blocks.
 
-Step 4: Boot the System
+### Step 4: Boot the System
 Start both the backend API and the frontend UI. You will need two terminal windows.
 
 Terminal 1 (Backend):
 
-Bash
-source venv/bin/activate
-uvicorn app.main:app --reload
-Terminal 2 (Frontend):
+```bash
+source .venv/bin/activate
+python3 backend/main.py
 
+Terminal 2 (Frontend):
 Bash
 cd frontend
-npm start
-Step 5: The "Cold Start" Handshake (Critical)
+npm run dev
+```
+
+### Step 5: The "Cold Start" Handshake (Critical)
 Because Telegram strictly protects user IDs, you must register your username in the local database before texting the bot. Do NOT press /start in your Telegram app yet.
 
-Open the React UI at http://localhost:3000.
+Open the React UI at http://localhost:5173.
 
-Navigate to the Settings and Goals tabs to configure your life anchors and social quotas.
+Navigate to the Settings tabs to configure interests, weekly template, nutrition
 
 Navigate to the Contacts tab and add a new contact for yourself. You must enter your exact Telegram @username. Leave the Chat ID field blank.
 
