@@ -1,9 +1,9 @@
 {
     "profile": {
-        "name": "Ethan",
+        "name": User,
         "email": "your-email@example.com",
         "timezone": "America/Los_Angeles",
-        "social_events_per_week": 2
+        "social_events_per_week": 0
     },
     "nutrition": {
         "baseline_protein_floor_g": 160,
