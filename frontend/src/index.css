@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #0f172a; /* Slate 900 */
+  --color-surface: #1e293b; /* Slate 800 */
+  --color-primary: #3b82f6; /* Blue 500 */
+  --color-work: #ef4444; /* Red 500 */
+  --color-habit: #3b82f6; /* Blue 500 */
+  --color-social: #10b981; /* Emerald 500 */
+  --color-text: #f8fafc; /* Slate 50 */
+  --color-muted: #94a3b8; /* Slate 400 */
+}
+
+@layer base {
+  body {
+    background-color: var(--color-background);
+    color: var(--color-text);
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Custom react-big-calendar overrides */
+.rbc-calendar {
+  @apply text-sm;
+  font-family: 'Inter', sans-serif;
+}
+
+.rbc-event {
+  @apply rounded-md border-none p-1 shadow-sm transition-all hover:brightness-110;
+}
+
+.rbc-event-label {
+  display: none !important;
+}
+
+.rbc-event-content {
+  @apply overflow-visible whitespace-normal break-words text-xs leading-tight font-bold;
+}
+
+.rbc-today {
+  @apply bg-surface/50;
+}
+
+.rbc-time-view, .rbc-month-view {
+  @apply border-surface;
+}
+
+.rbc-time-header.rbc-overflowing {
+  @apply border-r-0;
+}
+
+.rbc-header {
+  @apply border-b border-surface py-2 font-semibold text-muted;
+}
+
+.rbc-day-bg {
+  @apply border-l border-surface;
+}
+
+.rbc-day-slot .rbc-time-slot {
+  @apply border-t border-surface/50;
+}
+
+.rbc-timeslot-group {
+  @apply border-b border-surface;
+}
+
+.rbc-time-content {
+  @apply border-t border-surface;
+}
+
+.rbc-time-column {
+  @apply border-l border-surface;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: var(--color-background);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-surface);
+  @apply rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-muted);
+}

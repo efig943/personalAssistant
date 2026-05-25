@@ -1,0 +1,7 @@
+# Ignore specific local files
+data/google-auth-calendar.json
+token.json
+.env
+
+# Ignore entire folders
+.venv/
