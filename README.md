@@ -13,6 +13,101 @@
 
 ## Setup Instructions
 
+## 🚀 Installation & Setup
+
+### Prerequisites
+* Python 3.10+
+* Node.js (v18+)
+* Git
+
+### Step 1: Clone & Install Dependencies
+First, pull the code and set up your local environments.
+
+```bash
+# Clone the repository
+git clone [https://github.com/yourusername/social-butterfly.git](https://github.com/yourusername/social-butterfly.git)
+cd social-butterfly
+
+# Set up the Python Backend
+python -m venv venv
+source venv/bin/activate  # On Windows use: venv\Scripts\activate
+pip install -r requirements.txt
+
+# Set up the React Frontend
+cd frontend
+npm install
+cd ..
+Step 2: Environment Variables (.env)
+Create a .env file in the root directory and add the following keys:
+
+Code snippet
+GROQ_API_KEY=your_groq_api_key
+TELEGRAM_API_ID=your_api_id
+TELEGRAM_API_HASH=your_api_hash
+TELEGRAM_BOT_TOKEN=your_bot_token
+Groq: Get your API key from the Groq Console.
+
+Telegram: * Talk to @BotFather on Telegram to create a bot and get your TELEGRAM_BOT_TOKEN.
+
+Get your TELEGRAM_API_ID and TELEGRAM_API_HASH from my.telegram.org.
+
+Step 3: Google Calendar Integration
+The system needs access to your calendar to perform gap-scanning and collision detection.
+
+Create a Project: Go to the Google Cloud Console. Click the project drop-down at the top left and select New Project. Name it Social Butterfly.
+
+Enable the API: In the left sidebar, go to APIs & Services > Library. Search for Google Calendar API and click Enable.
+
+Configure Consent Screen:
+
+Go to APIs & Services > OAuth consent screen.
+
+Choose External and click Create. Fill in the mandatory app name and developer email.
+
+Crucial Step: On the "Test Users" step, click Add Users and add your own Google email address.
+
+Create the Credentials:
+
+Go to APIs & Services > Credentials.
+
+Click + Create Credentials > OAuth client ID.
+
+Select Desktop app (or Web application). Name it and click Create.
+
+Download & Rename: Click the Download JSON button. Rename that file strictly to credentials.json and place it inside the data/ folder in your project directory.
+
+Work Calendar ID: Locate your Work Calendar ID in your Google Calendar settings and ensure the system maps it correctly to avoid booking social events over work blocks.
+
+Step 4: Boot the System
+Start both the backend API and the frontend UI. You will need two terminal windows.
+
+Terminal 1 (Backend):
+
+Bash
+source venv/bin/activate
+uvicorn app.main:app --reload
+Terminal 2 (Frontend):
+
+Bash
+cd frontend
+npm start
+Step 5: The "Cold Start" Handshake (Critical)
+Because Telegram strictly protects user IDs, you must register your username in the local database before texting the bot. Do NOT press /start in your Telegram app yet.
+
+Open the React UI at http://localhost:3000.
+
+Navigate to the Settings and Goals tabs to configure your life anchors and social quotas.
+
+Navigate to the Contacts tab and add a new contact for yourself. You must enter your exact Telegram @username. Leave the Chat ID field blank.
+
+Click Save & Apply.
+
+Now, open Telegram on your phone, find your bot, and press /start.
+
+The backend will instantly intercept your message, match your @username to the database, silently cache your secure chat_id, and bind your profile to the bot. You are now ready to add your friends to the UI and let the agent take over!
+
+
+
 ## 🔥 The Problem
 
 Modern life is ruthlessly demanding. Between back-to-back meetings, aggressive deadlines, and the constant pressure to perform, **the things that actually matter quietly slip away.**
