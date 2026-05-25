@@ -2,15 +2,21 @@
 data/google-auth-calendar.json
 token.json
 .env
-backend/data/compiled_master_calendar.json
-backend/data/approved_social_events.json
-backend/data/contacts_registry.json
+data/compiled_master_calendar.json
+data/approved_social_events.json
+data/contacts_registry.json
 
-backend/data/conversation_states.json
-backend/data/interests.json
-backend/data/telegram_user_cache.json 
-backend/data/message_history.json 
-backend/data/user_goals.json
+data/conversation_states.json
+data/interests.json
+data/telegram_user_cache.json 
+data/message_history.json 
+data/user_goals.json
+
+
+data/compiled_master_calendar.json
+data/contacts_registry.json
+data/conversation_states.json
+data/telegram_user_cache.json
 
 
 # Ignore entire folders

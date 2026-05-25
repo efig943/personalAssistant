@@ -292,7 +292,14 @@ Telegram
 3. Follow the instructions to create your bot named Social Butterfly.
 4. BotFather will give you a **HTTP API token**.
 5. Save this token in your `.env` file as `TELEGRAM_BOT_TOKEN=`.
-6. 
+6. Log in to the Telegram Core Portal
+7. Open your web browser and go to my.telegram.org.
+8. Enter the phone number associated with your Telegram account in the international format (e.g., +12345678900).
+9. Click Next.
+10. Enter the Confirmation Code
+11. Telegram will not send this code via SMS text message. Will send on telegram app
+12. Click API development tools
+13. Save your API ID and API Hash in your `.env` file as `TELEGRAM_API_ID` and `TELEGRAM_API_HASH`.
 
 Groq
 1. Go to https://groq.com/signup and create an account.
@@ -336,6 +343,25 @@ Once this is done, go to the Social Butterfly bot and run /start in the chat of 
 ---
 
 ## How to use
+After settings are configured, as well as a contact is added, Google calendar service is getting your work calendar, we are calculated personal tasks, and the chat is ready
+
+This dashboard is meant mostly for viewing however, we added human in loop functionality, so that we approvae the tasks and suggested events.
+
+Once contact is added, contact can message and respond to the social butterfly bot, and the messages will be displayed on the dashboard, they can also schedule events with you through the bot checking your master calendar, it can move events around if it is not an anchor event. An anchor event is sleep, and the rest can be configured in the UI. 
+
+
+**Future implementations**: 
+1. Agent - Agent communication = Agent is able to chat to Agent owner by another user who has the same setup 
+2. Voice messages = Use Whisper API to transcribe voice messages, and Gemini API to generate voice responses
+3. Voice calls = Use Gemini Live to create agent that can answer phone calls for you, and scheulde events if needed 
+4. Limit the amount of events scheudled in a week -> currently proactive message is limited by this quota only.
+5. More Customization of the UI, and more filters to display events and tasks, 
+6. Email scraping Calendar scheudling = Add ability to look at calendar events from emails and auto scheudle them 
+
+**Scalability**: 
+This basically keeps someone disciplined, it holds you accountable for your goals and tasks, it reminds you of your goals and tasks, as well as lets you balence life with a friend. Talking with freinds is hard. This can also allow you to be more social with people you care about, since it takes the load off of you to remember things. You can focus more on the tasks at hand than rememebr did I respond to Aran, I should ask him to do something this week, mayb the times he can text is different that yours. we can scale this to work around your life. 
+
+
 ## ⚙️ Configuration
 
 All life configurations are editable live via the **React Settings Modal** or by directly editing the JSON files in `backend/data/`:
@@ -345,6 +371,11 @@ All life configurations are editable live via the **React Settings Modal** or by
 | `user_goals.json` | Weekly social quota, wake-up time, gym schedule, protein targets |
 | `contacts_registry.json` | Whitelisted Telegram contacts for CRM tracking |
 | `interests.json` | Your interest graph — used to personalize outreach messages |
+| `message_history.json` | History of messages received and sent  |
+| `compiled_master_calendar.json` | Your combined calendar |
+| `approved_social_events.json` | Social events that have been approved and added to the calendar |
+| `conversation_states.json` | Tracks current conversation states to resume where left off |
+
 
 ---
 
