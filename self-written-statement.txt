@@ -1,0 +1,29 @@
+Every solution begins with a problem. 
+
+As a busy professional, I lack a streamlined way to integrate work commitments, personal habits, and social connections into a single schedule, resulting in a fragmented life.
+Succeeding in this integration is essential to achieving sustainable personal well-being and a fulfilling lifestyle.
+
+To solve this problem for me and many others, especially those who lack the organization skils, I built an AI-powered personal assistant to solve this problem. 
+This agent will act as a proactive layer that manages your calendar, guards your habits, and autonomously maintains your relationships. 
+
+It does this by understanding what is locked in (Work), what is sacred (Habits), and what is negotiable (Social), and then proactively reaching out 
+via Telegram to schedule real-world meetups. 
+
+We use multiple strategies to get this done, the primary one being the LLM by Groq. The LLM is used to understand the context of the incoming message 
+and generate a response that is tailored to the user's needs, while keeping track of the conversation using long term memory. 
+
+We used two models to complete this since I was using groq free tier for this prootype, I used meta-llama/llama-4-scout-17b-16e for the planning or the agent tasks
+and for the tool calls, I would use llama-3.1-8b-instant for the tool calls since these tools dont need much reasoning.
+
+Since you can have multiple chats, the chats are organized by the user_id, which is primary key for most of the database. 
+
+While a conversation is happening we store, the state the conversation_state is in, whether it is negiotating, trying to lay out a plan, 
+or waiting for approval, or removed when plan, when removed we add it to the approved calendar list, where this is where we do our logic to 
+build our master list to view.
+
+I enjoyed this project, I enjoyed brainstorming about all the different projects I could have done. I was between this one and a project (Agent Family Matters) that 
+had one voice agent per family. Users in the family would call whenever to update about themselves and get information about what their 
+other family members are doing. I ultimately did not choose this because I believe AI should not replace family interaction. What made this project easy 
+to make, was antigravity. It helped me write code at a fast scale, as well as review the files it has created. i always never asked the ai to do two tasks 
+since the ai could lose context, and miss out. I made the ai do one task at a time. so planning on which prompt to use when was crucial.
+
