@@ -31,8 +31,8 @@ async def generate_social_draft(
     user_goals = data_controller.read_json("user_goals.json")
     quota = user_goals.get("profile", {}).get("social_events_per_week", "Unlimited")
     llm_routing = user_goals.get("llm_model_routing", {})
-    tool_worker = llm_routing.get("tool_worker", "llama3-8b-8192")
-    reasoning_worker = llm_routing.get("reasoning_worker", "llama3-70b-8192")
+    tool_worker = llm_routing.get("tool_worker", "llama-3.1-8b-instant")
+    reasoning_worker = llm_routing.get("reasoning_worker", "llama-3.3-70b-versatile")
 
     social_log = data_controller.read_json(
         "approved_social_events.json", default_val={"events": []}
@@ -81,7 +81,7 @@ async def generate_social_draft(
                     
                     "### TOOL CALLING PROTOCOLS (CRITICAL)\n"
                     "Evaluate the user's latest message. If either of these conditions are met, you MUST invoke the corresponding tool IMMEDIATELY and halt all other generation:\n"
-                    "1. THE CANCELLATION TRIGGER: If the user indicates unavailability ('I can't go', 'cancel that', 'something came up'), you MUST call the remove_social_event tool.\n"
+                    "1. THE CANCELLATION TRIGGER: If the user indicates ANY unavailability ('I can't go', 'cancel that', 'something came up', 'I am busy', 'I can't do [activity]', or words similar to not attending), you MUST call the remove_social_event tool IMMEDIATELY. Do not attempt to reason whether an event is actually scheduled or not—if they express unavailability, fire the tool.\n"
                     "2. THE TIME PROPOSAL TRIGGER: If the user proposes a specific day AND time, you MUST call the check_specific_time_availability tool before agreeing.\n"
                     "*(Note: If the tool returns 'Hard Conflict', apologize and propose a new time. If 'Clear' or 'Soft Conflict', immediately finalize the plan).*\n\n"
                     
@@ -128,11 +128,16 @@ async def generate_social_draft(
             "type": "function",
             "function": {
                 "name": "remove_social_event",
-                "description": "Use this tool when the user explicitly requests an event to be deleted, OR when they implicitly cancel by expressing that they cannot attend or need to call off the plans.",
+                "description": "CRITICAL: You MUST use this tool immediately whenever the user explicitly requests an event to be deleted, OR when they implicitly cancel by expressing that they cannot attend, got busy, or need to call off plans. Fire this tool even if you think there is no event currently scheduled.",
                 "parameters": {
                     "type": "object",
-                    "properties": {},
-                    "required": [],
+                    "properties": {
+                        "reason": {
+                            "type": "string",
+                            "description": "The exact reason the user provided for cancelling or not attending (e.g., 'got busy', 'can't go')."
+                        }
+                    },
+                    "required": ["reason"],
                 },
             },
         },
@@ -205,8 +210,9 @@ async def generate_social_draft(
                         }
                     )
                 elif tool_call.function.name == "remove_social_event":
+                    reason_arg = function_args.get("reason", "")
                     # Pass chat_id securely from execution context
-                    tool_result = await execute_remove_event_tool(chat_id)
+                    tool_result = await execute_remove_event_tool(chat_id, reason=reason_arg)
                     messages.append(
                         {
                             "tool_call_id": tool_call.id,

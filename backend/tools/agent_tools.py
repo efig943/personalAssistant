@@ -12,7 +12,8 @@ from backend.services.time_service import extract_proposed_time
 
 
 async def execute_remove_event_tool(
-    chat_id: str
+    chat_id: str,
+    reason: str = ""
 ) -> str:
     """Removes a social event from the calendar if the caller is the owner."""
     print(

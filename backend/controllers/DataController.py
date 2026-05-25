@@ -11,7 +11,9 @@ class DataController:
     """
     
     def __init__(self, data_dir: str = "data"):
-        self.data_dir = data_dir
+        # Anchor the data directory relative to the project root
+        root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        self.data_dir = os.path.join(root_dir, data_dir)
         if not os.path.exists(self.data_dir):
             os.makedirs(self.data_dir, exist_ok=True)
 
