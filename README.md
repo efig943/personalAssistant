@@ -39,7 +39,7 @@ npm install
 cd ..
 Step 2: Environment Variables (.env)
 Create a .env file in the root directory and add the following keys:
-
+****
 Code snippet
 GROQ_API_KEY=your_groq_api_key
 TELEGRAM_API_ID=your_api_id
