@@ -11,110 +11,6 @@
 
 ---
 
-## Setup Instructions
-
-## 🚀 Installation & Setup
-
-### Prerequisites
-* Python 3.10+
-* Node.js (v18+)
-* Git
-
-### Step 1: Clone & Install Dependencies
-First, pull the code and set up your local environments.
-
-```bash
-# Clone the repository
-git clone git clone https://github.com/efig943/personalAssistant.git
-cd personalAssitant
-
-# Set up the Python Backend
-python3 -m venv venv
-source .venv/bin/activate  
-pip install -r requirements.txt
-
-# Set up the React Frontend in second terminal
-source .venv/bin/activate  
-cd frontend
-npm install
-cd ..
-```
-
-### Step 2: Environment Variables (.env)
-Create a .env file in the root directory and add the following keys:
-
-```bash
-Code snippet
-GROQ_API_KEY=your_groq_api_key
-TELEGRAM_API_ID=your_api_id
-TELEGRAM_API_HASH=your_api_hash
-TELEGRAM_BOT_TOKEN=your_bot_token
-Groq: Get your API key from the Groq Console.
-```
-
-Telegram: * Talk to @BotFather on Telegram to create a bot and get your TELEGRAM_BOT_TOKEN.
-Get your TELEGRAM_API_ID and TELEGRAM_API_HASH from my.telegram.org.
-
-### Step 3: Google Calendar Integration
-## Google Calendar API Setup
-
-This project requires Google OAuth2 credentials to securely access and sync with your Google Calendar. Follow the steps below to generate the required setup files.
-
-## 1. Generate `credentials.json`
-You must manually generate this file via the Google Cloud Console to identify your local application:
-
-1. Go to the [Google Cloud Console](https://console.cloud.google.com/) and create a **New Project**.
-2. Navigate to **APIs & Services > Library**, search for **Google Calendar API**, and click **Enable**.
-3. Go to **APIs & Services > OAuth consent screen**:
-   * Select **External** and click **Create**.
-   * Fill out the required app details (App Name, Support Email).
-   * **Crucial:** Under the **Test Users** tab, click **Add Users** and add your own Gmail address. (Only accounts listed here can log in during development).
-4. Go to **APIs & Services > Credentials**:
-   * Click **+ Create Credentials** and select **OAuth client ID**.
-   * Choose **Desktop app** as the Application Type.
-   * Click **Create**, then click **Download JSON** on the confirmation popup.
-5. Rename the downloaded file to exactly `google-auth-calendar.json` and place it in the root directory of this project.
-
-## 2. Generate `token.json`
-You do not download this file. Your application code will generate it automatically on its first run:
-(can do this combined with step 4)
-1. Ensure `token.json` is safely placed in your root directory.
-2. Run your application script normally:
-   ```bash
-   python3  backend/main.py
-   
-### Step 4: Boot the System
-Start both the backend API and the frontend UI. You will need two terminal windows.
-
-Terminal 1 (Backend):
-
-```bash
-source .venv/bin/activate
-python3 backend/main.py
-
-Terminal 2 (Frontend):
-Bash
-cd frontend
-npm run dev
-```
-
-### Step 5: The "Cold Start" Handshake (Critical)
-Because Telegram strictly protects user IDs, you must register your username in the local database before texting the bot. Do NOT press /start in your Telegram app yet.
-
-Open the React UI at http://localhost:5173.
-
-Navigate to the Settings tabs to configure interests, weekly template, nutrition
-
-Navigate to the Contacts tab and add a new contact for yourself. You must enter your exact Telegram @username. Leave the Chat ID field blank.
-
-Click Save & Apply.
-
-Now, open Telegram on your phone, find your bot, and press /start.
-
-The backend will instantly intercept your message, match your @username to the database, silently cache your secure chat_id, and bind your profile to the bot. You are now ready to add your friends to the UI and let the agent take over!
-
-
-
 ## 🔥 The Problem
 
 Modern life is ruthlessly demanding. Between back-to-back meetings, aggressive deadlines, and the constant pressure to perform, **the things that actually matter quietly slip away.**
@@ -260,7 +156,7 @@ The system's core invariant is a **strict scheduling hierarchy**. All conflicts 
 Two models are used in a **2-pass architecture** to balance intelligence and speed:
 
 ```
-Pass 1 → llama-3.3-70b-versatile   (Reasoning: calendar analysis, social context)
+Pass 1 → meta-llama/llama-4-scout-17b-16e-instruct  (Reasoning: calendar analysis, social context)
 Pass 2 → llama-3.1-8b-instant      (Tool Worker: JSON draft generation, function calls)
 ```
 
@@ -357,7 +253,7 @@ This is not science fiction. It is the natural extension of the protocol already
 
 ## 🗺️ Roadmap
 
-### 🏗️ Infrastructure
+## 🏗️ Infrastructure
 - [ ] **PostgreSQL / SQLite migration** — Replace atomic JSON file databases with a proper relational store. Enables concurrent access, complex queries, and enterprise-scale contact lists.
 - [ ] **Redis pub/sub** — Replace polling-based UI refresh with real-time WebSocket pushes for instant draft notifications.
 
@@ -377,48 +273,69 @@ This is not science fiction. It is the natural extension of the protocol already
 
 - Python 3.12+
 - Node 20+
-- A [Groq API key](https://console.groq.com/)
-- A [Telegram Bot token](https://core.telegram.org/bots#how-do-i-create-a-bot) (via `@BotFather`)
+- A Groq API key
+- A Telegram Bot token (via @BotFather)
 - Google Cloud project with Gmail & Calendar APIs enabled
 
-### Backend Setup
+## Setup Instructions
 
 ```bash
 # 1. Clone the repo
 git clone https://github.com/your-username/personalAssistantAgent.git
 cd personalAssistantAgent
-
-# 2. Create and activate virtual environment
-python3.12 -m venv .venv
-source .venv/bin/activate
-
-# 3. Install dependencies
-pip install -r requirements.txt
-
-# 4. Configure environment variables
-cp .env.example .env
-# Fill in: GROQ_API_KEY, TELEGRAM_BOT_TOKEN, GOOGLE_CLIENT_ID, etc.
-
-# 5. Start the FastAPI backend
-cd backend
-uvicorn main:app --reload --port 8000
 ```
 
-### Frontend Setup
+Rename .env.example to .env and fill in your API keys
+Telegram
+1. Open your Telegram app (on your phone or desktop) and search for @BotFather in the search bar.
+2. Send a message to @BotFather: /newbot
+3. Follow the instructions to create your bot named Social Butterfly.
+4. BotFather will give you a **HTTP API token**.
+5. Save this token in your `.env` file as `TELEGRAM_BOT_TOKEN=`.
+6. 
 
-```bash
-# From the project root
-cd frontend
-npm install
-npm run dev
-# Vite serves at http://localhost:5173
+Groq
+1. Go to https://groq.com/signup and create an account.
+2. Copy your API key from the dashboard.
+3. Save it in your `.env` file as `GROQ_API_KEY=`.
+4. Go to settings, go to organization limits, Add the two models meta-llama/llama-4-scout-17b-16e-instruct and llama-3.1-8b-instant
+
+Google Cloud
+1. Go to https://console.cloud.google.com/ and create a project.
+2. Enable the Gmail API and Google Calendar API.
+3. Download the credentials.json file.
+4. Save it in your `.env` file as `GOOGLE_CREDENTIALS_PATH=`.
+
+google-auth-calendar.json (a.k.a crendentials.json)
+1. Go to Google Cloud console, Search for redentials, click create credentials, OAuth 2.0 Client ID, Desktop App, Name Personal-assistant
+2. Download the json file and rename file to google-auth-calendar.json 
+3. Save this file in the backend/data/ folder.
+*** When running will need to sign into google on first Run this creates your token.json ***
+
+Google Calendar (work schedule)
+1. Connect Google Calendar, rename it work-calendar
+2. Click settings and sharing, then click integrate calendar
+3. Copy the Calendar ID
+4. Save it in your `.env` file as `GOOGLE_CALENDAR_WORK_ID=`.
+
+
 ```
+./start
+```
+Once we start it go to [http://localhost:5173](http://localhost:5173) in your browser. 
+Sign into your google account and sync your calendar.
+Click the settings button fill out the 
+1. Profile & AI: enter your name, social quota,
+2. Core Habits: protein goals, meals per day, what time you want to wake up, how many hours you want to sleep
+3. Weekly Template: I used this as a place to put daily events such as gym, or sports, but can put any topic that is recurring to your personal habits, for now we can only add one
+4. Contacts: IMPORTANT - Put name as any name,(nickname), add the username to your friends account. if you dont have one, you can get one from settings on the phone app, and set it. This must be exact.
+5. Interests: Add as many interest you would like, I chose to add 3, this only suggest activities you like, we dont deny events that don't align with your interests though, since we should be open to new things.
+Hit save.
 
-The React dashboard will be available at **`http://localhost:5173`**.
-The FastAPI backend (with auto-generated docs) at **`http://localhost:8000/docs`**.
-
+Once this is done, go to the Social Butterfly bot and run /start in the chat of telegrams bot that we just created
 ---
 
+## How to use
 ## ⚙️ Configuration
 
 All life configurations are editable live via the **React Settings Modal** or by directly editing the JSON files in `backend/data/`:
@@ -446,7 +363,7 @@ All life configurations are editable live via the **React Settings Modal** or by
 | **Backend Runtime** | Python 3.12 |
 | **API Framework** | FastAPI + Uvicorn |
 | **Telegram Integration** | python-telegram-bot v22.7 (async) |
-| **LLM Provider** | Groq API (`llama-3.3-70b-versatile`, `llama-3.1-8b-instant`) |
+| **LLM Provider** | Groq API (`meta-llama/llama-4-scout-17b-16e-instruct`, `llama-3.1-8b-instant`) |
 | **Calendar & Email** | Google Workspace APIs (Gmail + Google Calendar) |
 | **Data Persistence** | Atomic JSON via `portalocker` |
 | **Frontend Runtime** | Node 20 |
