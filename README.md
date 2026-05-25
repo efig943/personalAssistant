@@ -25,79 +25,85 @@ First, pull the code and set up your local environments.
 
 ```bash
 # Clone the repository
-git clone [https://github.com/yourusername/social-butterfly.git](https://github.com/yourusername/social-butterfly.git)
-cd social-butterfly
+git clone git clone https://github.com/efig943/personalAssistant.git
+cd personalAssitant
 
 # Set up the Python Backend
-python -m venv venv
-source venv/bin/activate  # On Windows use: venv\Scripts\activate
+python3 -m venv venv
+source .venv/bin/activate  
 pip install -r requirements.txt
 
-# Set up the React Frontend
+# Set up the React Frontend in second terminal
+source .venv/bin/activate  
 cd frontend
 npm install
 cd ..
-Step 2: Environment Variables (.env)
-Create a .env file in the root directory and add the following keys:
-```bash
+```
 
+### Step 2: Environment Variables (.env)
+Create a .env file in the root directory and add the following keys:
+
+```bash
 Code snippet
 GROQ_API_KEY=your_groq_api_key
 TELEGRAM_API_ID=your_api_id
 TELEGRAM_API_HASH=your_api_hash
 TELEGRAM_BOT_TOKEN=your_bot_token
 Groq: Get your API key from the Groq Console.
+```
 
 Telegram: * Talk to @BotFather on Telegram to create a bot and get your TELEGRAM_BOT_TOKEN.
-
 Get your TELEGRAM_API_ID and TELEGRAM_API_HASH from my.telegram.org.
 
-Step 3: Google Calendar Integration
-The system needs access to your calendar to perform gap-scanning and collision detection.
+### Step 3: Google Calendar Integration
+## Google Calendar API Setup
 
-Create a Project: Go to the Google Cloud Console. Click the project drop-down at the top left and select New Project. Name it Social Butterfly.
+This project requires Google OAuth2 credentials to securely access and sync with your Google Calendar. Follow the steps below to generate the required setup files.
 
-Enable the API: In the left sidebar, go to APIs & Services > Library. Search for Google Calendar API and click Enable.
+## 1. Generate `credentials.json`
+You must manually generate this file via the Google Cloud Console to identify your local application:
 
-Configure Consent Screen:
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/) and create a **New Project**.
+2. Navigate to **APIs & Services > Library**, search for **Google Calendar API**, and click **Enable**.
+3. Go to **APIs & Services > OAuth consent screen**:
+   * Select **External** and click **Create**.
+   * Fill out the required app details (App Name, Support Email).
+   * **Crucial:** Under the **Test Users** tab, click **Add Users** and add your own Gmail address. (Only accounts listed here can log in during development).
+4. Go to **APIs & Services > Credentials**:
+   * Click **+ Create Credentials** and select **OAuth client ID**.
+   * Choose **Desktop app** as the Application Type.
+   * Click **Create**, then click **Download JSON** on the confirmation popup.
+5. Rename the downloaded file to exactly `google-auth-calendar.json` and place it in the root directory of this project.
 
-Go to APIs & Services > OAuth consent screen.
-
-Choose External and click Create. Fill in the mandatory app name and developer email.
-
-Crucial Step: On the "Test Users" step, click Add Users and add your own Google email address.
-
-Create the Credentials:
-
-Go to APIs & Services > Credentials.
-
-Click + Create Credentials > OAuth client ID.
-
-Select Desktop app (or Web application). Name it and click Create.
-
-Download & Rename: Click the Download JSON button. Rename that file strictly to credentials.json and place it inside the data/ folder in your project directory.
-
-Work Calendar ID: Locate your Work Calendar ID in your Google Calendar settings and ensure the system maps it correctly to avoid booking social events over work blocks.
-
-Step 4: Boot the System
+## 2. Generate `token.json`
+You do not download this file. Your application code will generate it automatically on its first run:
+(can do this combined with step 4)
+1. Ensure `token.json` is safely placed in your root directory.
+2. Run your application script normally:
+   ```bash
+   python3  backend/main.py
+   
+### Step 4: Boot the System
 Start both the backend API and the frontend UI. You will need two terminal windows.
 
 Terminal 1 (Backend):
 
-Bash
-source venv/bin/activate
-uvicorn app.main:app --reload
-Terminal 2 (Frontend):
+```bash
+source .venv/bin/activate
+python3 backend/main.py
 
+Terminal 2 (Frontend):
 Bash
 cd frontend
-npm start
-Step 5: The "Cold Start" Handshake (Critical)
+npm run dev
+```
+
+### Step 5: The "Cold Start" Handshake (Critical)
 Because Telegram strictly protects user IDs, you must register your username in the local database before texting the bot. Do NOT press /start in your Telegram app yet.
 
-Open the React UI at http://localhost:3000.
+Open the React UI at http://localhost:5173.
 
-Navigate to the Settings and Goals tabs to configure your life anchors and social quotas.
+Navigate to the Settings tabs to configure interests, weekly template, nutrition
 
 Navigate to the Contacts tab and add a new contact for yourself. You must enter your exact Telegram @username. Leave the Chat ID field blank.
 
