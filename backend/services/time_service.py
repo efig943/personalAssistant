@@ -72,6 +72,13 @@ async def extract_proposed_time(text: str) -> dict | None:
                     start_obj = tz.localize(start_obj)
                 if not end_obj.tzinfo:
                     end_obj = tz.localize(end_obj)
+                # Bug 3 Fix: Reject past dates at the extraction layer.
+                # This prevents the Failsafe and conflict pre-check from
+                # processing a proposed time that has already passed.
+                now_utc = datetime.datetime.now(datetime.timezone.utc)
+                if start_obj.astimezone(datetime.timezone.utc) < now_utc:
+                    print(f"[TIME EXTRACTION] Rejected past date: {start_obj}")
+                    return None
                 return {
                     "start": start_obj.astimezone(datetime.timezone.utc).isoformat(),
                     "end": end_obj.astimezone(datetime.timezone.utc).isoformat(),

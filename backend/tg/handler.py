@@ -91,15 +91,19 @@ async def telegram_message_handler(update: Update, context: ContextTypes.DEFAULT
     current_state_pre = state_pre.get(str(chat_id), {})
     current_event_state_pre = current_state_pre.get("event_state", {})
 
-    proposed_time_info = await extract_proposed_time(user_text)
+    # Bug A Fix: Only run the time extraction + conflict pre-check if the message
+    # contains an explicit time indicator. Day-only proposals (e.g. 'How about Saturday?')
+    # must NOT trigger the conflict pre-check — that causes false conflict fires.
+    # The LLM tool (check_specific_time_availability) handles day-only cases.
+    _TIME_INDICATOR_WORDS = {"pm", "am", "at", "o'clock", "noon", "midnight", ":"}
+    _has_time_indicator = any(w in user_text.lower() for w in _TIME_INDICATOR_WORDS)
+    proposed_time_info = await extract_proposed_time(user_text) if _has_time_indicator else None
 
     conflict_reason = ""
     if proposed_time_info:
         start_iso = proposed_time_info.get("start")
         end_iso = proposed_time_info.get("end")
-        already_has_date = bool(current_event_state_pre.get("date"))
-        already_has_time = bool(current_event_state_pre.get("time"))
-        if start_iso and end_iso and already_has_date and already_has_time:
+        if start_iso and end_iso:
             conflict_type, reason = check_event_conflict(start_iso, end_iso)
             if conflict_type == "hard":
                 conflict_reason = reason
@@ -122,12 +126,42 @@ async def telegram_message_handler(update: Update, context: ContextTypes.DEFAULT
     if not current_event_state.get("who"):
         current_event_state["who"] = sender_name
 
-    # Context injection: recent chat history (up to 3 previous messages)
+    # ── Bug 1 Fix: Stale pending_approval state reset ─────────────────────────
+    # If the previous state was pending_approval but the user is now sending a
+    # new reply (not an API approval action), the draft was never approved.
+    # Clear the stale date/time so the Failsafe doesn't collide with its own draft.
+    # Also persist to disk so the LLM's CURRENT_STATE context injection sees the
+    # correct state (generate_social_draft reads from JSON, not from in-memory).
+    if current_event_state.get("status") == "pending_approval":
+        current_event_state["date"] = None
+        current_event_state["time"] = None
+        current_event_state["status"] = "negotiating"
+        if str(chat_id) in state:
+            state[str(chat_id)]["event_state"] = current_event_state
+            state[str(chat_id)]["status"] = "negotiating"
+            data_controller.write_json("conversation_states.json", state)
+        print(f"[STATE RESET] Cleared stale pending_approval for chat_id={chat_id}")
+
+    # Opt 4: Context injection — rolling window with pruning.
+    # Exclude 'agent_draft' messages (pending approval drafts that were never actually sent)
+    # and cap the window at 4 valid messages (2 exchanges max).
     recent_history_context = []
-    # Extract up to 3 messages prior to the current user message
-    for msg in chat_history[-4:-1]:
-        sender = "You" if msg.get("sender") in ["agent", "agent_draft"] else "User"
-        recent_history_context.append(f"{sender}: '{msg.get('text')}'")
+    valid_history = [m for m in chat_history[:-1] if m.get("sender") != "agent_draft"]
+    # Truncate at the last system boundary (e.g. EVENT FINALIZED) so the LLM doesn't read stale negotiations.
+    boundary_idx = 0
+    for idx in range(len(valid_history) - 1, -1, -1):
+        if valid_history[idx].get("sender") == "system":
+            boundary_idx = idx + 1
+            break
+    valid_history = valid_history[boundary_idx:]
+
+    for msg in valid_history[-4:]:
+        sender = "You" if msg.get("sender") == "agent" else "User"
+        # Truncate very long past messages to 100 chars to prevent token bloat
+        text = msg.get("text", "")
+        if len(text) > 100:
+            text = text[:97] + "..."
+        recent_history_context.append(f"{sender}: '{text}'")
     
     if recent_history_context:
         history_str = " | ".join(recent_history_context)
@@ -169,6 +203,20 @@ async def telegram_message_handler(update: Update, context: ContextTypes.DEFAULT
 
     draft_text = draft_data.get("draft", "I'm not sure how to respond.")
 
+    # Bug 1 Fix: Intercept early LLM confirmations.
+    # If the draft contains a finalization phrase but a required field is still null,
+    # the LLM has confirmed too early (e.g. said 'see you at 7pm' without knowing WHERE).
+    # Override with a question asking for the specific missing field.
+    _CONFIRMATION_PHRASES = ["see you", "it's a date", "locked in", "i'll see you", "great, i will", "sounds like a plan"]
+    _REQUIRED_FIELDS = [("what", "what activity did you want to do"), ("where", "where did you want to meet"), ("date", "what day were you thinking"), ("time", "what time works best for you")]
+    if not conflict_reason and any(phrase in draft_text.lower() for phrase in _CONFIRMATION_PHRASES):
+        for field_key, field_question in _REQUIRED_FIELDS:
+            if not updated_state.get(field_key):
+                activity = updated_state.get('what', 'the event')
+                draft_text = f"Sounds fun! Quick question — {field_question} for {activity}?"
+                print(f"[BUG 1 FIX] LLM confirmed too early. Missing field: '{field_key}'. Overriding draft.")
+                break
+
     # If the AI forgot to set pending_approval when everything is filled
     if (
         not conflict_reason
@@ -200,9 +248,12 @@ async def telegram_message_handler(update: Update, context: ContextTypes.DEFAULT
     
     date_changed = date_str != current_event_state.get("date")
     time_changed = time_str != current_event_state.get("time")
-    status_changed_to_pending = (updated_state.get("status") == "pending_approval" and current_event_state.get("status") != "pending_approval")
-    
-    should_run_failsafe = (date_changed or time_changed or status_changed_to_pending) and (date_str and time_str)
+    # Bug 2 Fix: Only trigger the failsafe when the actual date or time VALUE changes.
+    # Removing `status_changed_to_pending` from the OR condition prevents the failsafe
+    # from re-running a conflict check when the user merely filled in the `where` field
+    # (which transitions status to pending_approval without changing date/time).
+    # That was causing false conflict fires on the `where` reply (e.g. "Alameda").
+    should_run_failsafe = (date_changed or time_changed) and (date_str and time_str)
     
     proposed_time_info_override = None
     if should_run_failsafe and not conflict_reason:
@@ -252,8 +303,11 @@ async def telegram_message_handler(update: Update, context: ContextTypes.DEFAULT
 
     # Force push to pending_approval so the modal opens when all fields are resolved,
     # regardless of whether the LLM explicitly remembered to set the status string.
+    # Bug C Fix: Guard with `not conflict_reason` so the failsafe's regression back
+    # to 'negotiating' can't be immediately overridden by this all-fields check.
     if (
-        updated_state.get("who")
+        not conflict_reason
+        and updated_state.get("who")
         and updated_state.get("what")
         and updated_state.get("where")
         and updated_state.get("date")

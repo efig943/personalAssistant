@@ -65,6 +65,6 @@
     },
     "llm_model_routing": {
         "tool_worker": "llama-3.1-8b-instant",
-        "reasoning_worker": "llama-3.3-70b-versatile"
+        "reasoning_worker": "meta-llama/llama-4-scout-17b-16e-instruct"
     }
 }

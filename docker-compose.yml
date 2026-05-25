@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount the data directory to persist JSON database files
+      - ./data:/app/data
+      # Mount token for Google Calendar OAuth if it exists
+      - ./token.json:/app/token.json
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      # Pass the internal Docker backend URL to the frontend
+      - VITE_API_URL=http://localhost:8000
+    env_file:
+      - .env
+    restart: unless-stopped
+    depends_on:
+      - backend

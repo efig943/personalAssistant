@@ -35,7 +35,7 @@ async def calendar_polling_loop():
 
 
 async def proactive_messaging_loop():
-    """Periodically triggers the proactive messaging evaluation (every hour)."""
+    """Periodically triggers the proactive messaging evaluation (every 2 minutes)."""
     while True:
         await evaluate_proactive_messaging()
-        await asyncio.sleep(3600)  # 1 hour
+        await asyncio.sleep(120)  # 2 minutes

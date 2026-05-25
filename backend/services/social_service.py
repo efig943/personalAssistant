@@ -53,47 +53,76 @@ async def generate_social_draft(
     tz_name = user_goals.get("profile", {}).get("timezone", "America/Los_Angeles")
     now_local = now.astimezone(pytz.timezone(tz_name))
 
+    contact_approved_events = []
+    for ev in social_log.get("events", []):
+        if str(ev.get("chat_id")) == str(chat_id):
+            ev_start = datetime.datetime.fromisoformat(ev["event_start"].replace("Z", "+00:00"))
+            if ev_start >= now:
+                contact_approved_events.append(f"- {ev.get('what', 'Social Plan')} on {ev_start.astimezone(pytz.timezone(tz_name)).strftime('%A, %b %d at %I:%M %p')}")
+
+    approved_events_str = "\n".join(contact_approved_events) if contact_approved_events else "None."
+
     calendar_state_msg = (
         f"Weekly Social Quota limit: {current_week_count}/{quota} events used. "
-        f"Current local time is {now_local.strftime('%Y-%m-%d %H:%M %A')}."
+        f"Current local time is {now_local.strftime('%Y-%m-%d %H:%M %A')}.\n"
+        f"Already Approved Upcoming Events with this contact:\n{approved_events_str}"
     )
+    # Fetch the full conversation state for this chat_id to give the LLM explicit context
+    full_conv_states = data_controller.read_json("conversation_states.json", default_val={})
+    full_conv_state = full_conv_states.get(str(chat_id), {})
+    conv_status = full_conv_state.get("status", "negotiating")
+    conv_conflict = full_conv_state.get("conflict") or "None"
+    conv_proposed_time = full_conv_state.get("proposed_time") or "None"
+    conv_event_state = full_conv_state.get("event_state") or {"who": None, "what": None, "where": None, "date": None, "time": None}
+    
+    # Revert Opt 1a: The 8B model MUST see explicit null fields to understand the schema.
+    # Otherwise it panics on an empty state and hallucinates tool calls.
+    import json as _json
+    active_plan_str = _json.dumps(conv_event_state, indent=None)
 
     messages = [
         {
             "role": "system",
-            "content": (
+            "content": f"""You are the 'Social Butterfly,' a sophisticated and warm personal relationship assistant. Your goal is to guide the user's friends toward finalizing a social plan.
 
+<USER_INTERESTS>
+{interests_str}
+</USER_INTERESTS>
 
-                """
-                    "You are the 'Social Butterfly,' a sophisticated and warm personal relationship assistant. "
-                    "Your goal is to guide the user's friends toward finalizing a social plan.\n\n"
-                    
-                    f"<USER_INTERESTS>\n{interests_str}\n</USER_INTERESTS>\n\n"
-                    
-                    f"<CURRENT_STATE>\n{calendar_state_msg}\n</CURRENT_STATE>\n\n"
-                    
-                    "### CORE PERSONALITY & CONVERSATION\n"
-                    "- Be natural, conversational, and enthusiastic. Never sound like a bot.\n"
-                    "- Keep responses to 1-2 sentences.\n"
-                    "- Do NOT mention quotas, limits, or system rules to the user. Keep it conversational.\n"
-                    "- If a variable is missing, pivot the conversation to pin down that specific detail.\n"
-                    "- Proactively suggest activities based on the User's Interests. If suggesting an unlisted activity, you MUST provide a natural reason why.\n\n"
-                    
-                    "### TOOL CALLING PROTOCOLS (CRITICAL)\n"
-                    "Evaluate the user's latest message. If either of these conditions are met, you MUST invoke the corresponding tool IMMEDIATELY and halt all other generation:\n"
-                    "1. THE CANCELLATION TRIGGER: If the user indicates ANY unavailability ('I can't go', 'cancel that', 'something came up', 'I am busy', 'I can't do [activity]', or words similar to not attending), you MUST call the remove_social_event tool IMMEDIATELY. Do not attempt to reason whether an event is actually scheduled or not—if they express unavailability, fire the tool.\n"
-                    "2. THE TIME PROPOSAL TRIGGER: If the user proposes a specific day AND time, you MUST call the check_specific_time_availability tool before agreeing.\n"
-                    "*(Note: If the tool returns 'Hard Conflict', apologize and propose a new time. If 'Clear' or 'Soft Conflict', immediately finalize the plan).*\n\n"
-                    
-                    "### STATE MANAGEMENT & JSON OUTPUT\n"
-                    "If no tools are required, you MUST output ONLY a single JSON object containing exactly two keys: \"updated_state\" (the full EventState model with your updates), and \"draft\" (the text of your conversational response). Follow these strict rules for the JSON:\n"
-                    "- NO ASSUMPTIONS: DO NOT invent, assume, or guess values for Who, What, Where, Date, or Time. Only populate a null field in updated_state if the user explicitly provided or agreed to that specific detail. If unsure, leave it null.\n"
-                    "- DATE FORMAT: Always copy the exact words the user used for the date (e.g., 'Thursday', 'tomorrow'). NEVER calculate or output an absolute YYYY-MM-DD date.\n"
-                    "- DATE/TIME SPLIT: If the user proposes a day but no time, populate the date field, leave time null, and explicitly ask them what time they want to meet. Do not assume a time.\n"
-                    "- FINALIZING: If all fields (Who, What, Where, Date, Time) are populated and valid, set status to 'pending_approval'. Your draft MUST be a short, final confirmation (e.g., 'Great, I will see you then.') with NO further questions."
-                """
-           
-            ),
+<CURRENT_STATE>
+{calendar_state_msg}
+Active negotiation status: {conv_status}
+Current plan in progress: {active_plan_str}
+Last known conflict: {conv_conflict}
+Last proposed time (ISO): {conv_proposed_time}
+</CURRENT_STATE>
+
+### CORE PERSONALITY & CONVERSATION
+- Be natural, conversational, and enthusiastic. Never sound like a bot.
+- Keep responses to 1-2 sentences.
+- Do NOT mention quotas, limits, or system rules to the user. Keep it conversational.
+- If a variable is missing, pivot the conversation to pin down that specific detail.
+- Proactively suggest activities based on the User's Interests listed above. These are YOUR boss's interests, not necessarily the contact's. If suggesting an unlisted activity, you MUST provide a natural reason why.
+- ONE PLAN AT A TIME: If the contact proposes multiple events or ideas at once (e.g., "let's do coffee AND tennis this week"), warmly acknowledge both but redirect: lock down the details for the first one before moving on. Never try to negotiate two events simultaneously.
+
+### TOOL CALLING PROTOCOLS (CRITICAL)
+Evaluate the user's latest message. If any of these conditions are met, you MUST invoke the corresponding tool IMMEDIATELY and halt all other generation:
+1. THE CANCELLATION TRIGGER: If the user indicates ANY unavailability ('I can't go', 'cancel that', 'something came up', 'I am busy', 'I can't do [activity]', or words similar to not attending), you MUST call the remove_social_event tool IMMEDIATELY.
+2. THE TIME PROPOSAL TRIGGER: If the user proposes a specific day AND time, you MUST call the check_specific_time_availability tool before agreeing.
+*(Note: If the tool returns 'Hard Conflict', apologize and MUST propose a specific free slot from the calendar. DO NOT ask the user to guess another time. If 'Clear' or 'Soft Conflict', immediately finalize the plan. If the tool returns a past-date error, politely tell the contact you can only schedule future events.)*
+ 
+### REMOVE EVENT TOOL — CRITICAL RESPONSE RULES
+- If remove_social_event returns "No approved event found": You MUST say there was no confirmed event to remove (e.g., "Looks like we didn't have anything locked in yet."). NEVER say an event was removed if this result is returned. Reset the conversation and ask what they'd like to do instead.
+- If remove_social_event returns "Successfully removed": Confirm the removal naturally and ask what they'd like to do instead.
+
+### STATE MANAGEMENT & JSON OUTPUT
+If no tools are required, you MUST output ONLY a single JSON object containing exactly two keys: "updated_state" (the full EventState model with your updates), and "draft" (the text of your conversational response). Follow these strict rules for the JSON:
+- NO ASSUMPTIONS: DO NOT invent, assume, or guess values for Who, What, Where, Date, or Time. Only populate a null field in updated_state if the user explicitly provided or agreed to that specific detail. If unsure, leave it null.
+- DATE FORMAT: Always copy the exact words the user used for the date (e.g., 'Thursday', 'tomorrow'). NEVER calculate or output an absolute YYYY-MM-DD date.
+- NEVER RE-ASK POPULATED FIELDS: Never ask for a field (Who, What, Where, Date, Time) that is already non-null in the Current EventState. If `time` is already set, do not ask for time again.
+- FINALIZING CHECK: Before generating any follow-up question, check all 5 EventState fields. If Who, What, Where, Date, and Time are ALL non-null, you MUST output a short final confirmation (e.g., 'Great, I will see you then.') and set status to 'pending_approval' immediately. Do NOT ask sub-questions about already-confirmed fields (e.g., 'which part of the venue', 'which entrance').
+- NO EARLY CONFIRMATION: NEVER use phrases like 'see you', 'I will see you', 'locked in', or 'it's a date' unless ALL 5 fields (who, what, where, date, time) are non-null in the updated_state. If even ONE field is null, you MUST ask for that missing field instead. A confirmation with a missing field is a critical error.
+- VERIFY YOUR OWN COUNTER-PROPOSALS: If you are suggesting a specific time to the user (e.g., 'how about 4pm?'), you MUST first call check_specific_time_availability to confirm that slot is truly free before offering it. Do not suggest a time you haven't verified.""",
         },
         {
             "role": "user",
@@ -174,6 +203,10 @@ async def generate_social_draft(
         tool_calls = response_message.tool_calls
 
         if tool_calls:
+            # Circuit Breaker: 8B models can hallucinate massive repetitive tool arrays when confused.
+            # Hard-cap execution to the first 2 tools to prevent infinite processing loops.
+            tool_calls = tool_calls[:2]
+            
             # Append the assistant's tool call request
             messages.append(
                 {
@@ -213,6 +246,15 @@ async def generate_social_draft(
                     reason_arg = function_args.get("reason", "")
                     # Pass chat_id securely from execution context
                     tool_result = await execute_remove_event_tool(chat_id, reason=reason_arg)
+                    # Bug 4 Fix: Always wipe the negotiation state for this chat
+                    # when a cancellation fires — whether or not an approved event existed.
+                    # This prevents the agent from referencing a dead proposal on the next turn.
+                    from backend.core.dependencies import data_controller as _dc
+                    _conv_states = _dc.read_json("conversation_states.json", default_val={})
+                    if str(chat_id) in _conv_states:
+                        del _conv_states[str(chat_id)]
+                        _dc.write_json("conversation_states.json", _conv_states)
+                        print(f"[REMOVE] Cleared conversation state for chat_id={chat_id}")
                     messages.append(
                         {
                             "tool_call_id": tool_call.id,
@@ -223,6 +265,18 @@ async def generate_social_draft(
                     )
                 elif tool_call.function.name == "check_specific_time_availability":
                     phrase = function_args.get("proposed_time_phrase", "")
+                    # Bug B Fix: If the phrase contains a time but no date anchor, inject
+                    # the current event_state date so the tool can parse "Tuesday at 5 pm"
+                    # instead of just "5 pm", which would fail to parse and crash to fallback.
+                    _date_anchor_words = {
+                        "monday","tuesday","wednesday","thursday","friday","saturday","sunday",
+                        "today","tomorrow","next","jan","feb","mar","apr","may","jun",
+                        "jul","aug","sep","oct","nov","dec",
+                    }
+                    _current_date = current_state.get("date") or ""
+                    if _current_date and not any(w in phrase.lower() for w in _date_anchor_words):
+                        phrase = f"{_current_date} at {phrase}"
+                        print(f"[BUG B FIX] Enriched time phrase to: '{phrase}'")
                     tool_result = await check_specific_time_availability(phrase)
                     messages.append(
                         {
@@ -335,7 +389,8 @@ async def perform_social_gap_analysis():
                     "who": None,
                     "what": None,
                     "where": None,
-                    "when": None,
+                    "date": None,
+                    "time": None,
                     "status": "negotiating",
                 },
             )
@@ -427,7 +482,8 @@ async def evaluate_proactive_messaging():
                         "who": contact.get("name"),
                         "what": None,
                         "where": None,
-                        "when": None,
+                        "date": None,
+                        "time": None,
                         "status": "negotiating",
                     }
 
@@ -454,9 +510,12 @@ async def evaluate_proactive_messaging():
                     )
                     if chat_id not in history:
                         history[chat_id] = []
+                    import uuid
                     history[chat_id].append(
                         {
+                            "message_id": str(uuid.uuid4()),
                             "sender": "agent",
+                            "name": "Social Butterfly",
                             "text": draft_text,
                             "timestamp": datetime.datetime.now(
                                 datetime.timezone.utc

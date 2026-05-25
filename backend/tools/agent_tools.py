@@ -111,6 +111,15 @@ async def check_specific_time_availability(proposed_time_phrase: str) -> str:
 
         ctype, c_reason = check_event_conflict(st_iso, en_iso)
         
+        # Bug 3 Fix: Reject past dates before any conflict check.
+        now_utc = datetime.datetime.now(datetime.timezone.utc)
+        proposed_start_dt = datetime.datetime.fromisoformat(st_iso.replace("Z", "+00:00"))
+        if proposed_start_dt < now_utc:
+            return (
+                "Error: Proposed time is in the past. "
+                "Tell the contact you can only schedule future events and ask them to suggest a future date."
+            )
+        
         if ctype == "hard":
             return f"Hard Conflict (Anchor Event): {c_reason}. You MUST politely decline this time and suggest a different time."
         elif ctype == "soft":

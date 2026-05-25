@@ -139,11 +139,11 @@ export default function SettingsModal({ onClose, initialGoals, initialContacts, 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-1">Tool Worker Model</label>
-                  <input type="text" value="llama3-8b-8192" readOnly className="w-full bg-surface border border-surface/50 rounded-lg p-2 text-sm text-text outline-none opacity-60 cursor-not-allowed" />
+                  <input type="text" value={goals.llm_model_routing?.tool_worker || ''} readOnly className="w-full bg-surface border border-surface/50 rounded-lg p-2 text-sm text-text outline-none opacity-60 cursor-not-allowed" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-1">Reasoning Worker Model</label>
-                  <input type="text" value="llama3-70b-8192" readOnly className="w-full bg-surface border border-surface/50 rounded-lg p-2 text-sm text-text outline-none opacity-60 cursor-not-allowed" />
+                  <input type="text" value={goals.llm_model_routing?.reasoning_worker || ''} readOnly className="w-full bg-surface border border-surface/50 rounded-lg p-2 text-sm text-text outline-none opacity-60 cursor-not-allowed" />
                 </div>
               </div>
             </div>

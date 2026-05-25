@@ -31,7 +31,11 @@ export default function ApprovalModal({ draft, onApprove, onDecline, onReject, o
         setNewDate(today.toISOString().split('T')[0]);
         setNewTime("18:00");
       } else {
-        const msg = err?.response?.data?.detail || err?.message || "Failed to send message.";
+        let msg = err?.response?.data?.detail;
+        if (Array.isArray(msg)) {
+          msg = msg.map(e => `${e.loc?.join('.')} ${e.msg}`).join(', ');
+        }
+        msg = msg || err?.message || "Failed to send message.";
         setApproveError(msg);
       }
     } finally {
@@ -48,7 +52,11 @@ export default function ApprovalModal({ draft, onApprove, onDecline, onReject, o
       const endIso = new Date(new Date(`${newDate}T${newTime}`).getTime() + 3600000).toISOString();
       await onProposeNewTime(startIso, endIso);
     } catch (err) {
-      const msg = err?.response?.data?.detail || err?.message || "Failed to propose new time.";
+      let msg = err?.response?.data?.detail;
+      if (Array.isArray(msg)) {
+        msg = msg.map(e => `${e.loc?.join('.')} ${e.msg}`).join(', ');
+      }
+      msg = msg || err?.message || "Failed to propose new time.";
       setApproveError(msg);
     } finally {
       setIsApproving(false);

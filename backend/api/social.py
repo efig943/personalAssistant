@@ -89,6 +89,16 @@ async def approve_social_event(request: SocialApprovalRequest):
         chat_history[-1]["text"] = request.approved_message
         chat_history[-1]["sender"] = "agent"
         chat_history[-1]["pending_approval"] = False
+        
+        import datetime
+        now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        chat_history.append({
+            "message_id": f"sys-{now}",
+            "sender": "system",
+            "name": "System",
+            "text": "--- EVENT FINALIZED ---",
+            "timestamp": now
+        })
         history[str(request.chat_id)] = chat_history
         data_controller.write_json("message_history.json", history)
 
