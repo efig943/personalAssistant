@@ -26,7 +26,7 @@ First, pull the code and set up your local environments.
 ```bash
 # Clone the repository
 git clone git clone https://github.com/efig943/personalAssistant.git
-cd personalAssitant
+cd personalAssitant ```
 
 # Set up the Python Backend
 python3 -m venv venv
