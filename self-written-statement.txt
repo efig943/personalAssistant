@@ -1,19 +1,24 @@
 Every solution begins with a problem. 
 
-As a busy professional, I lack a streamlined way to integrate work commitments, personal habits, and social connections into a single schedule, resulting in a fragmented life.
-Succeeding in this integration is essential to achieving sustainable personal well-being and a fulfilling lifestyle.
+As a professional with limited mental bandwidth,
+I want the system to autonomously handle the entire asynchronous negotiation of "when and where,"
+so that I don't abandon social plans just because the logistics are exhausting to coordinate.
 
-To solve this problem for me and many others, especially those who lack the organization skils, I built an AI-powered personal assistant to solve this problem. 
-This agent will act as a proactive layer that manages your calendar, guards your habits, and autonomously maintains your relationships. 
+As a busy professional focused on self-improvement,
+I want the calendar collision engine to strictly identify and protect my "anchor" habits (like the gym or deep work),
+so that the AI never proposes or accepts a social event that overwrites my non-negotiable personal time.
+
+To solve these problem for me and many others, I built a Personal assistant to solve this problem. 
+This agent will act as a proactive layer that manages your calendar, habits, and autonomously maintains your relationships. 
 
 It does this by understanding what is locked in (Work), what is sacred (Habits), and what is negotiable (Social), and then proactively reaching out 
 via Telegram to schedule real-world meetups. 
 
 We use multiple strategies to get this done, the primary one being the LLM by Groq. The LLM is used to understand the context of the incoming message 
-and generate a response that is tailored to the user's needs, while keeping track of the conversation using long term memory. 
+and generate a response that is tailored to scheduling an event on your social calendar, while keeping track of the conversation using long term memory. 
 
-We used two models to complete this since I was using groq free tier for this prootype, I used meta-llama/llama-4-scout-17b-16e for the planning or the agent tasks
-and for the tool calls, I would use llama-3.1-8b-instant for the tool calls since these tools dont need much reasoning.
+We used two models to complete this since I was using groq free tier for this prootype, I used meta-llama/llama-4-scout-17b-16e for the planning, 
+chossing which tools to call or the agent tasks, for the tool calls, I would use llama-3.1-8b-instant for the tool calls since these tools dont need much reasoning.
 
 Since you can have multiple chats, the chats are organized by the user_id, which is primary key for most of the database. 
 
@@ -21,9 +26,23 @@ While a conversation is happening we store, the state the conversation_state is 
 or waiting for approval, or removed when plan, when removed we add it to the approved calendar list, where this is where we do our logic to 
 build our master list to view.
 
+For the prototype, I chose to store chats in a json so that I would be able to debug very easily. After a test, I would be able to give the chat the message history, 
+see if there were any hallucinations, time conversion errors. If you were to run this for a while, the json file would get big and hard to manage. 
+For productions, I would choose to store this in an sql database. Switching to an sql database would solve concurrency issues, build more connections between relational
+data.
+
+The hardest part of this project is getting the perfect prompt with just enough context so that I see the results im asking for from the llm. Multiple times, I 
+hit rate limits where I had to change my approach in how I use the llm model. The tools needs about 1800 tokens per tool use, the chat uses 1500 tokens per 
+llm call. I used a rolling window technique to reduce my context, as well as splitting my approach in how I used the llm model. I used llama4 for the chat, and 
+llama 3 for the tool use. If I wanted to put this out to production, I definately need would upgrade the llama4 model to Claude 3.5 Sonnet because it would be 
+more responsive to my prompts. If I used Claude Sonnet llm, I would be able to develop the nutritional portion of the agent. Based on the user settings, it could 
+suggest meals you could eat based on your macros.
+
 I enjoyed this project, I enjoyed brainstorming about all the different projects I could have done. I was between this one and a project (Agent Family Matters) that 
 had one voice agent per family. Users in the family would call whenever to update about themselves and get information about what their 
-other family members are doing. I ultimately did not choose this because I believe AI should not replace family interaction. What made this project easy 
+other family members are doing. I ultimately did not choose this because I believe AI should not replace family interaction. 
+
+What made this project easy 
 to make, was antigravity. It helped me write code at a fast scale, as well as review the files it has created. i always never asked the ai to do two tasks 
-since the ai could lose context, and miss out. I made the ai do one task at a time. so planning on which prompt to use when was crucial.
+since the ai could lose context, and miss out. I made the ai do one task at a time, in an organized fasion. Designing this project was crucial for this project.
 
