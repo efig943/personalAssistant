@@ -361,6 +361,8 @@ Once contact is added, contact can message and respond to the social butterfly b
 **Scalability**: 
 This basically keeps someone disciplined, it holds you accountable for your goals and tasks, it reminds you of your goals and tasks, as well as lets you balence life with a friend. Talking with freinds is hard. This can also allow you to be more social with people you care about, since it takes the load off of you to remember things. You can focus more on the tasks at hand than rememebr did I respond to Aran, I should ask him to do something this week, mayb the times he can text is different that yours. we can scale this to work around your life. 
 
+**Limitations**: 
+Since in this prototype is not using the best LLM, tool calling can be slow, hallucinations are prone to happen. I have put as many guardrails as I can, to handle edge cases
 
 ## ⚙️ Configuration
 
