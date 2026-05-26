@@ -80,6 +80,20 @@ async def generate_social_draft(
     import json as _json
     active_plan_str = _json.dumps(conv_event_state, indent=None)
 
+    # Fetch recent chat history
+    history_data = data_controller.read_json("message_history.json", default_val={})
+    chat_history = history_data.get(str(chat_id), [])
+    recent_history = chat_history[-6:] if chat_history else []
+    
+    # Format history as a readable string instead of adding actual message roles 
+    # to avoid confusing the 8B model's strict role-parsing logic
+    history_str_lines = []
+    for msg in recent_history:
+        sender_name = msg.get("name", msg.get("sender", "Unknown"))
+        text = msg.get("text", "")
+        history_str_lines.append(f"[{sender_name}]: {text}")
+    history_context = "\n".join(history_str_lines) if history_str_lines else "No previous history."
+
     messages = [
         {
             "role": "system",
@@ -97,32 +111,47 @@ Last known conflict: {conv_conflict}
 Last proposed time (ISO): {conv_proposed_time}
 </CURRENT_STATE>
 
+<RECENT_CHAT_HISTORY>
+{history_context}
+</RECENT_CHAT_HISTORY>
+
+CRITICAL INSTRUCTION: If the RECENT_CHAT_HISTORY shows that an event was just finalized, and the user is now just saying thanks or goodbye (e.g. "oki see you there"), you MUST ONLY reply with a short, polite farewell (e.g. "See you then!"). DO NOT SUGGEST ACTIVITIES. DO NOT ASK QUESTIONS.
+
 ### CORE PERSONALITY & CONVERSATION
 - Be natural, conversational, and enthusiastic. Never sound like a bot.
 - Keep responses to 1-2 sentences.
+- When suggesting when to meet, use relative days for the current week (e.g., "Monday", "Wednesday", "Saturday") if possible, or "this upcoming [day name]". Use exact dates only if necessary.
 - Do NOT mention quotas, limits, or system rules to the user. Keep it conversational.
+- Do not ask for extra information if it's not needed to proceed with the task. 
 - If a variable is missing, pivot the conversation to pin down that specific detail.
-- Proactively suggest activities based on the User's Interests listed above. These are YOUR boss's interests, not necessarily the contact's. If suggesting an unlisted activity, you MUST provide a natural reason why.
+- Proactively suggest activities based on the User's Interests listed above. These are YOUR boss's interests, not necessarily the contact's. If suggesting an unlisted activity, you MUST provide a natural reason why. (EXCEPTION: Do NOT proactively suggest activities if the user is just saying goodbye or confirming a plan).
+- ACCEPT THE CONTACT'S ACTIVITY: If the contact proposes an activity (especially one from the user's interests list), you MUST accept it and move forward. Do NOT counter-propose a different activity just because you suggested something first. Never reject a reasonable activity without a clear logistical reason.
 - ONE PLAN AT A TIME: If the contact proposes multiple events or ideas at once (e.g., "let's do coffee AND tennis this week"), warmly acknowledge both but redirect: lock down the details for the first one before moving on. Never try to negotiate two events simultaneously.
+- GRAMMAR: Always write grammatically correct, natural English. Never produce broken or inverted sentences (e.g., never say 'No 2 PM works for you' — say 'No worries, 2 PM doesn't work for you' instead).
 
 ### TOOL CALLING PROTOCOLS (CRITICAL)
-Evaluate the user's latest message. If any of these conditions are met, you MUST invoke the corresponding tool IMMEDIATELY and halt all other generation:
-1. THE CANCELLATION TRIGGER: If the user indicates ANY unavailability ('I can't go', 'cancel that', 'something came up', 'I am busy', 'I can't do [activity]', or words similar to not attending), you MUST call the remove_social_event tool IMMEDIATELY.
+Evaluate the user's latest message. If any of these conditions are met, you MUST invoke the corresponding tool IMMEDIATELY and halt all other generation. DO NOT output the final JSON object if you call a tool. ONLY output the tool call and stop:
+1. THE CANCELLATION TRIGGER: If the user indicates ANY unavailability ('I can't go', 'cancel that', 'something came up', 'I am busy', 'I can't do [activity]', or words similar to not attending), you MUST call the remove_social_event tool IMMEDIATELY. Do NOT call this tool if the user is just saying goodbye or 'see you there'.
 2. THE TIME PROPOSAL TRIGGER: If the user proposes a specific day AND time, you MUST call the check_specific_time_availability tool before agreeing.
+3. THE GRACEFUL EXIT: If the active plan is empty and the user is just saying goodbye, confirming a plan ('see you there'), or saying thanks, DO NOT CALL ANY TOOLS. Proceed to output JSON with a graceful farewell (e.g., "See you then!").
 *(Note: If the tool returns 'Hard Conflict', apologize and MUST propose a specific free slot from the calendar. DO NOT ask the user to guess another time. If 'Clear' or 'Soft Conflict', immediately finalize the plan. If the tool returns a past-date error, politely tell the contact you can only schedule future events.)*
  
 ### REMOVE EVENT TOOL — CRITICAL RESPONSE RULES
-- If remove_social_event returns "No approved event found": You MUST say there was no confirmed event to remove (e.g., "Looks like we didn't have anything locked in yet."). NEVER say an event was removed if this result is returned. Reset the conversation and ask what they'd like to do instead.
+(ONLY follow these rules if you literally just executed the remove_social_event tool)
+- If remove_social_event returns "No approved event found": You MUST say there was no confirmed event to remove (e.g., "I couldn't find any scheduled event to cancel."). NEVER say an event was removed if this result is returned. Reset the conversation and ask what they'd like to do instead.
 - If remove_social_event returns "Successfully removed": Confirm the removal naturally and ask what they'd like to do instead.
 
 ### STATE MANAGEMENT & JSON OUTPUT
 If no tools are required, you MUST output ONLY a single JSON object containing exactly two keys: "updated_state" (the full EventState model with your updates), and "draft" (the text of your conversational response). Follow these strict rules for the JSON:
+- AVOID 'NONE' IN DRAFT: If an EventState field is null, DO NOT interpolate the word 'None' or 'null' into your conversational draft (e.g., never say 'what did you want to do for None?'). Ask for the missing detail naturally (e.g., 'what activity did you have in mind?').
 - NO ASSUMPTIONS: DO NOT invent, assume, or guess values for Who, What, Where, Date, or Time. Only populate a null field in updated_state if the user explicitly provided or agreed to that specific detail. If unsure, leave it null.
 - DATE FORMAT: Always copy the exact words the user used for the date (e.g., 'Thursday', 'tomorrow'). NEVER calculate or output an absolute YYYY-MM-DD date.
 - NEVER RE-ASK POPULATED FIELDS: Never ask for a field (Who, What, Where, Date, Time) that is already non-null in the Current EventState. If `time` is already set, do not ask for time again.
 - FINALIZING CHECK: Before generating any follow-up question, check all 5 EventState fields. If Who, What, Where, Date, and Time are ALL non-null, you MUST output a short final confirmation (e.g., 'Great, I will see you then.') and set status to 'pending_approval' immediately. Do NOT ask sub-questions about already-confirmed fields (e.g., 'which part of the venue', 'which entrance').
-- NO EARLY CONFIRMATION: NEVER use phrases like 'see you', 'I will see you', 'locked in', or 'it's a date' unless ALL 5 fields (who, what, where, date, time) are non-null in the updated_state. If even ONE field is null, you MUST ask for that missing field instead. A confirmation with a missing field is a critical error.
-- VERIFY YOUR OWN COUNTER-PROPOSALS: If you are suggesting a specific time to the user (e.g., 'how about 4pm?'), you MUST first call check_specific_time_availability to confirm that slot is truly free before offering it. Do not suggest a time you haven't verified.""",
+- NO EARLY CONFIRMATION: NEVER use phrases like 'see you', 'I will see you', 'locked in', 'we are all set', 'we're all set', or 'it's a date' unless ALL 5 fields (who, what, where, date, time) are non-null in the updated_state. If even ONE field is null, you MUST ask for that missing field instead. A confirmation with a missing field is a critical error.
+- GRACEFUL EXIT: If the user says goodbye or confirms a plan (e.g. 'see you there', 'sounds good'), YOU MUST gracefully end the conversation with a short farewell (e.g., 'See you then!'). You are strictly forbidden from asking any questions, suggesting activities, or asking what they want to do.
+- VERIFY YOUR OWN COUNTER-PROPOSALS: If you are suggesting a specific time to the user (e.g., 'how about 4pm?'), you MUST first call check_specific_time_availability to confirm that slot is truly free before offering it. Do not suggest a time you haven't verified.
+- VERIFY YOUR OWN DAY SUGGESTIONS: If you are proactively suggesting a specific day (e.g., 'how about Saturday?'), you MUST first call check_calendar_availability for that day to verify it has free slots before suggesting it."""
         },
         {
             "role": "user",
@@ -138,8 +167,11 @@ If no tools are required, you MUST output ONLY a single JSON object containing e
             "function": {
                 "name": "check_calendar_availability",
                 "description": (
-                    "Fetches the user's free and busy blocks for a specific date from the Master Calendar. "
-                    "Use this whenever the user proposes a day, or when you need to suggest a day."
+                    "Fetches the user's free and busy blocks for a specific DATE from the Master Calendar. "
+                    "WHEN TO USE: Call this tool when the user proposes ONLY a day with NO specific time "
+                    "(e.g., 'Tuesday', 'Saturday'). "
+                    "After calling this, you will propose a specific free time slot from the results. "
+                    "DO NOT call this if the user also provided a specific time — use check_specific_time_availability instead."
                 ),
                 "parameters": {
                     "type": "object",
@@ -157,7 +189,7 @@ If no tools are required, you MUST output ONLY a single JSON object containing e
             "type": "function",
             "function": {
                 "name": "remove_social_event",
-                "description": "CRITICAL: You MUST use this tool immediately whenever the user explicitly requests an event to be deleted, OR when they implicitly cancel by expressing that they cannot attend, got busy, or need to call off plans. Fire this tool even if you think there is no event currently scheduled.",
+                "description": "CRITICAL: You MUST use this tool immediately whenever the user explicitly requests an event to be deleted, OR when they implicitly cancel by expressing that they cannot attend, got busy, or need to call off plans. Fire this tool even if you think there is no event currently scheduled. DO NOT use this tool if the user is just saying goodbye or confirming a plan (e.g. 'see you there').",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -174,13 +206,19 @@ If no tools are required, you MUST output ONLY a single JSON object containing e
             "type": "function",
             "function": {
                 "name": "check_specific_time_availability",
-                "description": "Checks if a specific time is free on the Master Calendar. Use this BEFORE agreeing to a proposed time.",
+                "description": (
+                    "Checks if a specific DATE AND TIME is free on the Master Calendar. "
+                    "WHEN TO USE: Call this tool ONLY when the user explicitly provides BOTH a day AND a specific clock time "
+                    "(e.g., 'Tuesday at 4pm', 'Saturday at 2pm', '16:00 on Friday'). "
+                    "DO NOT call this tool if the user only named a day with no time (e.g., 'Tuesday', 'Saturday'). "
+                    "In that case, use check_calendar_availability instead to find a free slot."
+                ),
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "proposed_time_phrase": {
                             "type": "string",
-                            "description": "The exact time phrase proposed, e.g., 'Tuesday at 2pm'.",
+                            "description": "The exact day AND time phrase the user proposed, e.g., 'Tuesday at 2pm'. Must contain both a day and a clock time.",
                         }
                     },
                     "required": ["proposed_time_phrase"],
@@ -325,7 +363,46 @@ If no tools are required, you MUST output ONLY a single JSON object containing e
                 "draft": "I'm having trouble thinking of a response right now.",
             }
     except Exception as e:
+        e_str = str(e)
         print(f"Error in generate_social_draft Pass 1: {e}")
+        
+        # [RECOVERY] Catch Groq's tool_use_failed error to intercept malformed tool calls from 8B models
+        if "tool_use_failed" in e_str and "failed_generation" in e_str:
+            import re
+            match = re.search(r'<function=([a-zA-Z0-9_]+)>(\{.*?\})', e_str)
+            if match:
+                func_name = match.group(1)
+                args_str = match.group(2).replace("\\'", "'")  # Fix invalid JSON single-quote escaping
+                try:
+                    function_args = json.loads(args_str)
+                    print(f"[RECOVERY] Intercepted malformed tool call: {func_name} with args {function_args}")
+                    
+                    if func_name == "remove_social_event":
+                        reason_arg = function_args.get("reason", "")
+                        tool_result = await execute_remove_event_tool(chat_id, reason=reason_arg)
+                        
+                        from backend.core.dependencies import data_controller as _dc
+                        _conv_states = _dc.read_json("conversation_states.json", default_val={})
+                        if str(chat_id) in _conv_states:
+                            del _conv_states[str(chat_id)]
+                            _dc.write_json("conversation_states.json", _conv_states)
+                            print(f"[REMOVE] Cleared conversation state for chat_id={chat_id}")
+                            
+                        # Manually inject the tool message to jump to Pass 2 gracefully
+                        messages.append({
+                            "role": "assistant",
+                            "content": "",
+                            "tool_calls": [{"id": "recovered_call", "type": "function", "function": {"name": func_name, "arguments": args_str}}]
+                        })
+                        messages.append({
+                            "tool_call_id": "recovered_call",
+                            "role": "tool",
+                            "name": "remove_social_event",
+                            "content": tool_result,
+                        })
+                except json.JSONDecodeError:
+                    pass
+        
         try:
             fallback_response = await groq_client.chat.completions.create(
                 messages=messages,

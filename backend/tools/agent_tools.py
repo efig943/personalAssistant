@@ -19,13 +19,34 @@ async def execute_remove_event_tool(
     print(
         f"DEBUG: execute_remove_event_tool called with chat_id={chat_id}"
     )
+
+    # ── Priority 1: Check for an in-flight pending negotiation ───────────────
+    # If the contact cancels BEFORE the user has clicked "Approve" in the UI,
+    # the event only exists in conversation_states.json (never written to
+    # approved_social_events.json). We must clear THAT state, not mistakenly
+    # remove an old stale approved event from a prior session.
+    conv_states = data_controller.read_json("conversation_states.json", default_val={})
+    active_state = conv_states.get(str(chat_id), {})
+    event_state = active_state.get("event_state", {})
+    has_pending_negotiation = any(
+        event_state.get(k) for k in ["what", "date", "time"]
+    )
+
+    if has_pending_negotiation:
+        what = event_state.get("what") or "plan"
+        del conv_states[str(chat_id)]
+        data_controller.write_json("conversation_states.json", conv_states)
+        print(f"[REMOVE] Cleared pending (unapproved) negotiation for chat_id={chat_id}: {what}")
+        return f"Successfully cancelled the pending plan to {what} with this contact."
+
+    # ── Priority 2: Remove an already-approved event from the calendar ───────
     social_log = data_controller.read_json(
         "approved_social_events.json", default_val={"events": []}
     )
     events = social_log.get("events", [])
     removed = False
 
-    # Since the LLM often hallucinates the target_date (e.g. 'tomorrow') or event_title ('getting some boba'),
+    # Since the LLM often hallucinates the target_date or event_title,
     # the most robust way to find the event is to match the chat_id for the most recently scheduled event.
     for i in range(len(events) - 1, -1, -1):
         if str(events[i].get("chat_id")) == str(chat_id):
@@ -89,6 +110,7 @@ async def execute_calendar_tool(target_date: str) -> str:
         )
 
     lines.append("\nNote: Any time not listed above is FREE and available to schedule.")
+    lines.append("CRITICAL INSTRUCTION: If the contact only proposed a day (e.g., 'Saturday') and did NOT propose a specific time, DO NOT say you have a conflict. Instead, pick a specific time from the FREE periods and propose it to the contact.")
     return "\n".join(lines)
 
 

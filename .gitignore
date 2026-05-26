@@ -11,11 +11,6 @@ data/interests.json
 data/telegram_user_cache.json 
 data/message_history.json 
 data/user_goals.json
-
-
-data/compiled_master_calendar.json
-data/contacts_registry.json
-data/conversation_states.json
 data/telegram_user_cache.json
 
 

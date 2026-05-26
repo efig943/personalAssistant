@@ -142,6 +142,21 @@ async def telegram_message_handler(update: Update, context: ContextTypes.DEFAULT
             data_controller.write_json("conversation_states.json", state)
         print(f"[STATE RESET] Cleared stale pending_approval for chat_id={chat_id}")
 
+    # ── Bug 5 Fix: Expire stale agent_draft messages in message history ────────
+    # If a previous agent_draft (pending_approval=True) was never approved/rejected
+    # by the user, and the contact has now sent a new message, auto-expire the draft
+    # so the UI stops showing ghost approval modals for outdated proposals.
+    stale_drafts_found = False
+    for msg in chat_history:
+        if msg.get("sender") == "agent_draft" and msg.get("pending_approval") is True:
+            msg["pending_approval"] = False
+            msg["sender"] = "agent_draft_expired"
+            stale_drafts_found = True
+    if stale_drafts_found:
+        history[str(chat_id)] = chat_history
+        data_controller.write_json("message_history.json", history)
+        print(f"[DRAFT EXPIRE] Expired stale agent_draft(s) for chat_id={chat_id}")
+
     # Opt 4: Context injection — rolling window with pruning.
     # Exclude 'agent_draft' messages (pending approval drafts that were never actually sent)
     # and cap the window at 4 valid messages (2 exchanges max).
@@ -212,7 +227,7 @@ async def telegram_message_handler(update: Update, context: ContextTypes.DEFAULT
     if not conflict_reason and any(phrase in draft_text.lower() for phrase in _CONFIRMATION_PHRASES):
         for field_key, field_question in _REQUIRED_FIELDS:
             if not updated_state.get(field_key):
-                activity = updated_state.get('what', 'the event')
+                activity = updated_state.get('what') or 'the event'
                 draft_text = f"Sounds fun! Quick question — {field_question} for {activity}?"
                 print(f"[BUG 1 FIX] LLM confirmed too early. Missing field: '{field_key}'. Overriding draft.")
                 break
@@ -314,6 +329,8 @@ async def telegram_message_handler(update: Update, context: ContextTypes.DEFAULT
         and updated_state.get("time")
     ):
         updated_state["status"] = "pending_approval"
+    else:
+        updated_state["status"] = "negotiating"
 
     is_resolved = updated_state.get("status") == "pending_approval"
 

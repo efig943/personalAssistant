@@ -180,7 +180,7 @@ export default function CRMPanel({ contacts, onReopenProposal }) {
                 </div>
               ) : (
                 messages.map((msg, idx) => {
-                  const isAgent = msg.sender === 'agent' || msg.sender === 'agent_draft';
+                  const isAgent = msg.sender?.startsWith('agent');
                   return (
                     <div key={idx} className={cn("flex flex-col max-w-[75%]", isAgent ? "ml-auto items-end" : "mr-auto items-start")}>
                       <span className="text-xs text-muted mb-1 font-semibold tracking-wide ml-1 mr-1">{msg.name}</span>

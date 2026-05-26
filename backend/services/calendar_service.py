@@ -339,7 +339,8 @@ def check_event_conflict(start_iso: str, end_iso: str) -> tuple[bool, str]:
 
             if overlap_start < overlap_end:
                 if event.get("is_anchor"):
-                    # Immediate hard conflict
+                    # Social events (Tier 3) are now hard blocks.
+                    # Tier 1 (work) or Tier 2 (habit) anchors are hard blocks.
                     return "hard", f"Time slot blocked by a fixed anchor event: {event.get('title')}"
                 else:
                     # Record soft conflict but keep scanning for hard conflicts

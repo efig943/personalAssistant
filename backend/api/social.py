@@ -64,18 +64,27 @@ async def approve_social_event(request: SocialApprovalRequest):
     social_log = data_controller.read_json(
         "approved_social_events.json", default_val={"events": []}
     )
-    social_log["events"].append(
-        {
-            "event_title": request.event_title,
-            "event_start": request.event_start,
-            "event_end": request.event_end,
-            "who": event_state.get("who"),
-            "what": event_state.get("what"),
-            "where": event_state.get("where"),
-            "chat_id": request.chat_id,
-        }
+    
+    # Check for duplicates before appending
+    is_duplicate = any(
+        str(ev.get("chat_id")) == str(request.chat_id) and 
+        ev.get("event_start") == request.event_start
+        for ev in social_log.get("events", [])
     )
-    data_controller.write_json("approved_social_events.json", social_log)
+    
+    if not is_duplicate:
+        social_log["events"].append(
+            {
+                "event_title": request.event_title,
+                "event_start": request.event_start,
+                "event_end": request.event_end,
+                "who": event_state.get("who"),
+                "what": event_state.get("what"),
+                "where": event_state.get("where"),
+                "chat_id": request.chat_id,
+            }
+        )
+        data_controller.write_json("approved_social_events.json", social_log)
 
     # 3. Cleanup conversation state
     if request.chat_id in state:
@@ -110,12 +119,18 @@ async def approve_social_event(request: SocialApprovalRequest):
     # Gap-Scan Verification Payload
     if displaced_event_title:
         try:
-            target_date = datetime.datetime.fromisoformat(request.event_start.replace("Z", "+00:00")).date()
+            import pytz
+            user_goals = data_controller.read_json("user_goals.json", default_val={})
+            tz_name = user_goals.get("profile", {}).get("timezone", "America/Los_Angeles")
+            local_tz = pytz.timezone(tz_name)
+            
+            target_date = datetime.datetime.fromisoformat(request.event_start.replace("Z", "+00:00")).astimezone(local_tz).date()
             for ev in new_calendar:
                 if ev.get("title") == displaced_event_title:
-                    ev_date = datetime.datetime.fromisoformat(ev["start"].replace("Z", "+00:00")).date()
+                    ev_date = datetime.datetime.fromisoformat(ev["start"].replace("Z", "+00:00")).astimezone(local_tz).date()
                     if ev_date == target_date:
-                        new_time = datetime.datetime.fromisoformat(ev["start"].replace("Z", "+00:00")).strftime("%H:%M")
+                        new_time_local = datetime.datetime.fromisoformat(ev["start"].replace("Z", "+00:00")).astimezone(local_tz)
+                        new_time = new_time_local.strftime("%I:%M %p").lstrip("0")
                         detail_message = f"Social event approved. {displaced_event_title} successfully moved to {new_time}."
                         print(f"[Verification] {detail_message}")
                         break

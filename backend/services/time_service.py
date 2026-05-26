@@ -35,7 +35,7 @@ async def extract_proposed_time(text: str) -> dict | None:
         "1. If the user explicitly proposes a time (e.g., 'Tuesday at 2pm', 'tomorrow at 5pm'), extract the exact phrase.\n"
         "2. If the user DOES NOT explicitly propose a time, or merely agrees to a time someone else proposed (e.g., 'Yes', 'That works', 'Sounds good', 'Sure'), YOU MUST return an empty JSON: {}\n"
         "3. DO NOT hallucinate times. DO NOT output 'tomorrow at 5pm' unless the user literally typed it.\n"
-        "4. If no end time is specified, infer it as 1 hour after the start time in the same format. Do not leave it null."
+        "4. If no end time is explicitly specified by the user, leave the 'end' key as null. ALWAYS populate 'start' before 'end'."
     )
 
     try:
@@ -50,7 +50,12 @@ async def extract_proposed_time(text: str) -> dict | None:
         )
         data = json.loads(response.choices[0].message.content)
 
-        if data.get("start") and data.get("end"):
+        # Fix 8B model occasionally putting the time in "end" instead of "start"
+        if not data.get("start") and data.get("end"):
+            data["start"] = data["end"]
+            data["end"] = None
+
+        if data.get("start"):
             start_obj = dateparser.parse(
                 str(data["start"]),
                 settings={
@@ -59,22 +64,28 @@ async def extract_proposed_time(text: str) -> dict | None:
                     "TIMEZONE": tz_name,
                 },
             )
-            end_obj = dateparser.parse(
-                str(data["end"]),
-                settings={
-                    "PREFER_DATES_FROM": "future",
-                    "RELATIVE_BASE": now_local,
-                    "TIMEZONE": tz_name,
-                },
-            )
-            if start_obj and end_obj:
+            
+            end_obj = None
+            if data.get("end"):
+                end_obj = dateparser.parse(
+                    str(data["end"]),
+                    settings={
+                        "PREFER_DATES_FROM": "future",
+                        "RELATIVE_BASE": now_local,
+                        "TIMEZONE": tz_name,
+                    },
+                )
+
+            if start_obj:
                 if not start_obj.tzinfo:
                     start_obj = tz.localize(start_obj)
-                if not end_obj.tzinfo:
+                    
+                if not end_obj:
+                    end_obj = start_obj + datetime.timedelta(hours=1)
+                elif not end_obj.tzinfo:
                     end_obj = tz.localize(end_obj)
+
                 # Bug 3 Fix: Reject past dates at the extraction layer.
-                # This prevents the Failsafe and conflict pre-check from
-                # processing a proposed time that has already passed.
                 now_utc = datetime.datetime.now(datetime.timezone.utc)
                 if start_obj.astimezone(datetime.timezone.utc) < now_utc:
                     print(f"[TIME EXTRACTION] Rejected past date: {start_obj}")
