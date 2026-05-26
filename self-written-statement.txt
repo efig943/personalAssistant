@@ -42,7 +42,7 @@ I enjoyed this project, I enjoyed brainstorming about all the different projects
 had one voice agent per family. Users in the family would call whenever to update about themselves and get information about what their 
 other family members are doing. I ultimately did not choose this because I believe AI should not replace family interaction. 
 
-What made this project easy 
-to make, was antigravity. It helped me write code at a fast scale, as well as review the files it has created. i always never asked the ai to do two tasks 
-since the ai could lose context, and miss out. I made the ai do one task at a time, in an organized fasion. Designing this project was crucial for this project.
+What made this project easy to make, was antigravity. It helped me write code at a fast scale, as well as review the files it has created. i always never asked 
+the ai to do two tasks since the ai could lose context, and miss out. I made the ai do one task at a time, in an organized fasion. Designing this project was crucial 
+for this project.
 
